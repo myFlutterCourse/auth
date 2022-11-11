@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors
 
 import 'package:auth/login_form.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 // Define a custom Form widget.
@@ -19,6 +20,8 @@ class RegisterFormState extends State<RegisterForm> {
   String emailadress = "";
   String password = "";
   String confirmPassword = "";
+  bool _isHidden = true;
+  bool _isHidden2 = true;
 
   @override
   Widget build(BuildContext context) {
@@ -104,11 +107,27 @@ class RegisterFormState extends State<RegisterForm> {
                         left: 35.0, right: 35.0, top: 15, bottom: 0),
                     //padding: EdgeInsets.symmetric(horizontal: 15),
                     child: TextFormField(
-                      obscureText: true,
+                      obscureText: _isHidden,
                       decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Password',
-                          hintText: 'Enter secure password'),
+                        border: OutlineInputBorder(),
+                        labelText: 'Password',
+                        hintText: 'Enter secure password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            // Based on passwordVisible state choose the icon
+                            _isHidden
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: Theme.of(context).primaryColorDark,
+                          ),
+                          onPressed: () {
+                            // Update the state i.e. toogle the state of passwordVisible variable
+                            setState(() {
+                              _isHidden = !_isHidden;
+                            });
+                          },
+                        ),
+                      ),
                       onChanged: (value) => {
                         setState(
                           () {
@@ -131,11 +150,27 @@ class RegisterFormState extends State<RegisterForm> {
                         left: 35.0, right: 35.0, top: 15, bottom: 0),
                     //padding: EdgeInsets.symmetric(horizontal: 15),
                     child: TextFormField(
-                      obscureText: true,
+                      obscureText: _isHidden2,
                       decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Confirm Password',
-                          hintText: 'Confirm your password'),
+                        border: OutlineInputBorder(),
+                        labelText: 'Confirm Password',
+                        hintText: 'Confirm your password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            // Based on passwordVisible state choose the icon
+                            _isHidden
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: Theme.of(context).primaryColorDark,
+                          ),
+                          onPressed: () {
+                            // Update the state i.e. toogle the state of passwordVisible variable
+                            setState(() {
+                              _isHidden = !_isHidden;
+                            });
+                          },
+                        ),
+                      ),
                       onChanged: (value) => {
                         setState(
                           () {
@@ -227,9 +262,29 @@ class RegisterFormState extends State<RegisterForm> {
     if (_formKey.currentState!.validate()) {
       // If the form is valid, display a snackbar. In the real world,
       // you'd often call a server or save the information in a database.
+      register();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Processing Data')),
       );
+    }
+  }
+
+  void register() async {
+    try {
+      final credential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailadress,
+        password: password,
+      );
+      Navigator.push(context, MaterialPageRoute(builder: (_) => LoginForm()));
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'weak-password') {
+        print('The password provided is too weak.');
+      } else if (e.code == 'email-already-in-use') {
+        print('The account already exists for that email.');
+      }
+    } catch (e) {
+      print(e);
     }
   }
 }

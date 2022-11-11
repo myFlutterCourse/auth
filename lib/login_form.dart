@@ -1,6 +1,8 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors
 
 import 'package:auth/register_form.dart';
+import 'package:auth/user_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 // Define a custom Form widget.
@@ -17,7 +19,7 @@ class LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   String emailadress = "";
   String password = "";
-
+  bool _isHidden = true;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,11 +82,25 @@ class LoginFormState extends State<LoginForm> {
                         left: 35.0, right: 35.0, top: 15, bottom: 0),
                     //padding: EdgeInsets.symmetric(horizontal: 15),
                     child: TextFormField(
-                      obscureText: true,
+                      obscureText: _isHidden,
                       decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Password',
-                          hintText: 'Enter secure password'),
+                        border: OutlineInputBorder(),
+                        labelText: 'Password',
+                        hintText: 'Enter secure password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            // Based on passwordVisible state choose the icon
+                            _isHidden ? Icons.visibility : Icons.visibility_off,
+                            color: Theme.of(context).primaryColorDark,
+                          ),
+                          onPressed: () {
+                            // Update the state i.e. toogle the state of passwordVisible variable
+                            setState(() {
+                              _isHidden = !_isHidden;
+                            });
+                          },
+                        ),
+                      ),
                       onChanged: (value) => {
                         setState(
                           () {
@@ -208,15 +224,42 @@ class LoginFormState extends State<LoginForm> {
       ),
     );
   }
-  void sendForm(){
+
+  void sendForm() {
     //   Navigator.push(
-                    //       context, MaterialPageRoute(builder: (_) => ()));
-                    if (_formKey.currentState!.validate()) {
-                      // If the form is valid, display a snackbar. In the real world,
-                      // you'd often call a server or save the information in a database.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Processing Data')),
-                      );
-                    }
+    //       context, MaterialPageRoute(builder: (_) => ()));
+    if (_formKey.currentState!.validate()) {
+      // If the form is valid, display a snackbar. In the real world,
+      // you'd often call a server or save the information in a database.
+      signIn();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Processing Data'),
+        duration: Duration(seconds: 1),
+      ));
+    }
+  }
+
+  void signIn() async {
+    try {
+      final credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: emailadress, password: password);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged in ')),
+      );
+      var user = credential.user;
+      // navigate to home page
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => UserPage(user: user!)));
+      print("logged in");
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No user found for that email.')),
+        );
+      } else if (e.code == 'wrong-password') {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Wrong password provided for that user.')));
+      }
+    }
   }
 }
